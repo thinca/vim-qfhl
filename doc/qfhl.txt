@@ -1,0 +1,251 @@
+*qfhl.txt*	Highlights quickfix and location list positions.
+
+Version: 1.0.0
+Author : thinca <thinca+vim@gmail.com>
+License: zlib License
+
+==============================================================================
+CONTENTS					*qfhl-contents*
+
+INTRODUCTION			|qfhl-introduction|
+USAGE				|qfhl-usage|
+INTERFACE			|qfhl-interface|
+  COMMANDS			  |qfhl-commands|
+  FUNCTIONS			  |qfhl-functions|
+CUSTOMIZING			|qfhl-customizing|
+  VARIABLES			  |qfhl-variables|
+  HIGHLIGHTS			  |qfhl-highlights|
+CHANGELOG			|qfhl-changelog|
+
+
+
+==============================================================================
+INTRODUCTION					*qfhl-introduction*
+
+*qfhl.vim* is a Vim plugin to highlight the quickfix and location list
+positions.
+This plugin uses |text-properties| feature to highlight texts.
+
+Requirements:
+- Latest version of Vim
+  - Developed with v8.2.3249
+  - |+textprop|
+  - |:scriptversion|
+    - `has('vimscript-4')`
+
+Latest version:
+https://github.com/thinca/vim-qfhl
+
+
+
+==============================================================================
+USAGE						*qfhl-usage*
+
+When you execute a command that updates the |quickfix| like `:grep`, this
+plugin highlights the locations in |quickfix|.
+
+This plugin is automatically enabled when you open a quickfix window.
+If you need to enable the feature with other case, use the following command.
+>
+	:QfhlEnable
+<
+Alternatively, you can enable it automatically by writing the following
+settings in your vimrc.
+>
+	let g:qfhl_startup = 'enable'
+<
+Enabling this plugin means automatically highlighted the locations of quickfix
+and location list.
+Sometimes highlights not follow the latest quickfix and location list, for
+example, they are updated by other plugins via calling |setqflist()| directly.
+In this case, you can update highlights by |:QfhlUpdate| command.
+
+
+
+==============================================================================
+INTERFACE					*qfhl-interface*
+
+------------------------------------------------------------------------------
+COMMANDS					*qfhl-commands*
+
+:QfhlEnable					*:QfhlEnable*
+	Executes |:QfhlAutoOn| then executes |:QfhlUpdateAll|.
+
+:QfhlDisable					*:QfhlDisable*
+	Executes |:QfhlAutoOff| then executes |:QfhlClearAll|.
+
+:QfhlToggle					*:QfhlToggle*
+	When auto updating is on, executes |:QfhlDisable|.
+	When auto updating is off, executes |:QfhlEnable|.
+
+:QfhlAutoOn					*:QfhlAutoOn*
+	Starts auto updating.
+
+:QfhlAutoOff					*:QfhlAutoOff*
+	Stops auto updating.
+
+:QfhlAutoStatus					*:QfhlAutoStatus*
+	Echoes the auto updating is "on" or "off".
+
+:QfhlAutoToggle					*:QfhlAutoToggle*
+	When auto updating is on, switch to off.
+	When auto updating is off, switch to on.
+
+:QfhlUpdate[!]					*:QfhlUpdate*
+	Updates highlights of current window.
+	This avoids unnecessary updating when [!] is not supplied.
+
+:QfhlUpdateAll[!]				*:QfhlUpdateAll*
+	Updates highlights of all windows in current tabpage.
+	This avoids unnecessary updating when [!] is not supplied.
+
+:QfhlClear[!]					*:QfhlClear*
+	Clears highlights of the current buffer.
+	If [!] is supplied, clears highlights but do not update the internal
+	flag "this buffer is already updated".  This means |:QfhlUpdate| does
+	not update highlights.  You can use :QfhlUpdate! to update force.
+
+:QfhlClearAll[!]				*:QfhlClearAll*
+	Clear highlights of all buffers.
+	See |:QfhlClear| for what [!] means.
+
+
+
+------------------------------------------------------------------------------
+FUNCTIONS					*qfhl-functions*
+
+qfhl#is_auto_on()				*qfhl#is_auto_on()*
+	When auto updating is on, returns |v:true|.
+	When auto updating is off, returns |v:false|.
+
+qfhl#set_auto({on})				*qfhl#set_auto()*
+	When {on} is |TRUE|, starts auto updating.
+	When {on} is |FALSE|, stops auto updating.
+	When auto updating state is changed, returns |v:true|.
+	Otherwise returns |v:false|.
+
+qfhl#update({winid} [, {force}])		*qfhl#update()*
+	Updates highlights for specified window.
+	This avoids unnecessary updating when {force} is |FALSE|.
+
+qfhl#update_all({tabnr} [, {force}])		*qfhl#update_all()*
+	Updates highlights of all windows in specified tabpages.
+	When {tabnr} is negative, all tabpages are updated.
+	When {tabnr} is zero, current tabpage is updated.
+	This avoids unnecessary updating when {force} is |FALSE|.
+
+qfhl#add_highlights({locations}, {hl-group})	*qfhl#add_highlights()*
+	Adds highlights from {locations}.
+	See |getqflist()| about {locations}.
+	{hl-group} is highlight group.  "quickfix" or "loclist".
+
+qfhl#clear({bufnr}, {keep} [, {hl-groups}])	*qfhl#clear()*
+	Clears highlights of a buffer {bufnr}.
+	Only {hl-groups} are cleared when it is specified.
+	If {keep} is |TRUE|, clears highlights but do not update the internal
+	flag "this buffer is already updated".  This means |qfhl#update()|
+	with {force} is |FALSE| does not update highlights.
+
+qfhl#clear_all({keep} [, {hl-groups}])		*qfhl#clear_all()*
+	Clears highlights of all buffers.
+	See |qfhl#clear()| for what arguments mean.
+
+
+
+==============================================================================
+CUSTOMIZING					*qfhl-customizing*
+
+------------------------------------------------------------------------------
+VARIABLES					*qfhl-variables*
+
+g:qfhl_startup					*g:qfhl_startup*
+	Initial state of qfhl.  This variable must be set before plugin
+	loaded.  (e.g. vimrc)
+
+	"enable":	Enable on startup.
+	"lazy":		Enable when quickfix/location-list window is opened or
+			|QuickFixCmdPost| even is fired.
+			Note that it is not enabled when other plugin called
+			|setqflist()| or |setloclist()|.
+	"disable":	Do not enable automatically.  You need execute
+			|:QfhlAutoOn| Ex command manually.
+
+	Default: "lazy"
+
+g:qfhl#multi_loclist				*g:qfhl#multi_loclist*
+	Behavior of showing location list when a buffer is displayed in
+	multiple windows.
+
+	This plugin uses |text-properties| to highlight, so the highlights are
+	associated to each buffer.  However, a buffer can be displayed at
+	multiple windows.  Each window can have a location list.  This means
+	highlights are conflict in each window.
+
+	"flush":	Reapply highlights when you move between windows.
+	"keep":		When there is no location list entry, does not clear
+			highlights applied before.
+	"merge":	Collect from all windows and show them.
+
+	Default: "keep"
+
+
+
+------------------------------------------------------------------------------
+HIGHLIGHTS					*qfhl-highlights*
+
+QfhlError					*hl-QfhlError*
+	A highlight for 'E' type.
+
+	Default: link to "SpellBad" (|hl-SpellBad|)
+
+QfhlWarning					*hl-QfhlWarning*
+	A highlight for 'W' type.
+
+	Default: link to "SpellCap" (|hl-SpellCap|)
+
+QfhlInfo					*hl-QfhlInfo*
+	A highlight for others.
+
+	Default: link to "QfhlWarning" (|hl-QfhlWarning|)
+
+QfhlQuickfixError				*hl-QfhlQuickfixError*
+	A highlight for 'E' type from |quickfix|.
+
+	Default: link to "QfhlError" (|hl-QfhlError|)
+
+QfhlQuickfixWarning				*hl-QfhlQuickfixWarning*
+	A highlight for 'W' type from |quickfix|.
+
+	Default: link to "QfhlWarning" (|hl-QfhlWarning|)
+
+QfhlQuickfixInfo				*hl-QfhlQuickfixInfo*
+	A highlight for others from |quickfix|.
+
+	Default: link to "QfhlInfo" (|hl-QfhlInfo|)
+
+QfhlLoclistError				*hl-QfhlLoclistError*
+	A highlight for 'E' type from |location-list|.
+
+	Default: link to "QfhlError" (|hl-QfhlError|)
+
+QfhlLoclistWarning				*hl-QfhlLoclistWarning*
+	A highlight for 'W' type from |location-list|.
+
+	Default: link to "QfhlWarning" (|hl-QfhlWarning|)
+
+QfhlLoclistInfo					*hl-QfhlLoclistInfo*
+	A highlight for others from |location-list|.
+
+	Default: link to "QfhlInfo" (|hl-QfhlInfo|)
+
+
+
+==============================================================================
+CHANGELOG					*qfhl-changelog*
+
+1.0.0	2021-07-31
+	- Initial version.
+
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl

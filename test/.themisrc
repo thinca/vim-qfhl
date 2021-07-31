@@ -1,0 +1,31 @@
+call themis#option('recursive', 1)
+
+call themis#helper('command').with(themis#helper('assert'))
+
+function PropAll(bufnrs) abort
+  let bufnrs = type(a:bufnrs) is v:t_list ? a:bufnrs : [a:bufnrs]
+  let multi_buf = 2 <= len(bufnrs)
+  let props = []
+  for bufnr in bufnrs
+    for lnum in range(1, getbufinfo(bufnr)[0].linecount)
+      let list = prop_list(lnum, #{bufnr: bufnr})
+      for prop in list
+        if multi_buf
+          let prop.bufnr = bufnr
+        endif
+        let prop.lnum = lnum
+        " Remove uninterested keys
+        call s:remove(prop, 'id')
+        call s:remove(prop, 'type_bufnr')
+      endfor
+      let props += list
+    endfor
+  endfor
+  return props
+endfunction
+
+function s:remove(dict, key) abort
+  if has_key(a:dict, a:key)
+    call remove(a:dict, a:key)
+  endif
+endfunction

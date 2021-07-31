@@ -1,0 +1,93 @@
+Describe auto
+  Before
+    let lines =<< trim BUFFER
+    foofoofoo
+    barbarbar
+    buzbuzbuz
+    BUFFER
+
+    enew
+    call setline(1, lines)
+    let bufnr1 = bufnr('%')
+
+    new
+    call setline(1, lines)
+    let bufnr2 = bufnr('%')
+    let bufnrs = [bufnr1, bufnr2]
+
+    call setqflist([
+    \   #{bufnr: bufnr1, lnum: 1, type: ''},
+    \   #{bufnr: bufnr2, lnum: 2, type: ''},
+    \ ])
+  End
+
+  After
+    bwipeout!
+    bwipeout!
+  End
+
+  Context when it is on
+    Before
+      QfhlAutoOn
+    End
+
+    After
+      QfhlAutoOff
+    End
+
+    Context when quickfix cmd is executed
+      It updates all highlights in current tabpage
+        Assert Equals(PropAll(bufnrs), [])
+        doautocmd QuickfixCmdPost
+        Assert Equals(PropAll(bufnrs), [
+        \   #{
+        \     bufnr: bufnr1, type: 'qfhl_quickfix_info',
+        \     lnum: 1, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \   #{
+        \     bufnr: bufnr2, type: 'qfhl_quickfix_info',
+        \     lnum: 2, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \ ])
+      End
+    End
+
+    Context when current window is changed
+      It updates highlights
+        Assert Equals(PropAll(bufnrs), [])
+        split
+        Assert Equals(PropAll(bufnrs), [
+        \   #{
+        \     bufnr: bufnr2, type: 'qfhl_quickfix_info',
+        \     lnum: 2, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \ ])
+      End
+    End
+  End
+
+  Context when it is off
+    Before
+      QfhlAutoOff
+    End
+
+    Context when quickfix cmd is executed
+      It doesn't update highlights
+        Assert Equals(PropAll(bufnrs), [])
+        doautocmd QuickfixCmdPost
+        Assert Equals(PropAll(bufnrs), [])
+      End
+    End
+
+    Context when current window is changed
+      It updates highlights
+        Assert Equals(PropAll(bufnrs), [])
+        split
+        Assert Equals(PropAll(bufnrs), [])
+      End
+    End
+  End
+End

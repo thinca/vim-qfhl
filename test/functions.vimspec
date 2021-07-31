@@ -1,0 +1,591 @@
+Describe functions
+  Describe qfhl#is_auto_on()
+    Context when auto updating is off
+      It returns v:false
+        call qfhl#set_auto(v:false)
+        Assert False(qfhl#is_auto_on())
+      End
+    End
+
+    Context when auto updating is on
+      It returns v:true
+        call qfhl#set_auto(v:true)
+        Assert True(qfhl#is_auto_on())
+      End
+    End
+  End
+
+  Describe qfhl#set_auto()
+    Context when {on} is TRUE
+      It starts auto updating
+        call qfhl#set_auto(v:true)
+        Assert True(qfhl#is_auto_on())
+      End
+    End
+
+    Context when {on} is FALSE
+      It stops auto updating
+        call qfhl#set_auto(v:false)
+        Assert False(qfhl#is_auto_on())
+      End
+    End
+  End
+
+  Describe qfhl#update()
+    Before
+      let lines =<< trim BUFFER
+      foofoofoo
+      barbarbar
+      buzbuzbuz
+      BUFFER
+
+      enew
+      call setline(1, lines)
+      let bufnr = bufnr('%')
+    End
+
+    After
+      bwipeout!
+    End
+
+    Context when quickfix exists
+      Before
+        call setqflist([
+        \   #{bufnr: bufnr, lnum: 1, type: ''},
+        \   #{bufnr: bufnr, lnum: 2, type: ''},
+        \ ])
+      End
+
+      It updates text properties
+        Assert Equals(PropAll(bufnr), [])
+        call qfhl#update(win_getid())
+        Assert Equals(PropAll(bufnr), [
+        \   #{
+        \     type: 'qfhl_quickfix_info',
+        \     lnum: 1, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \   #{
+        \     type: 'qfhl_quickfix_info',
+        \     lnum: 2, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \ ])
+      End
+
+      Context when already updated
+        Before
+          call qfhl#update(win_getid())
+          " qfhl#update() was applied but text props were removed accidentally
+          call prop_remove(#{
+          \   type: 'qfhl_quickfix_info',
+          \   bufnr: bufnr,
+          \   all: v:true,
+          \ })
+        End
+
+        Context when {force} is false
+          It does not update highlights
+            Assert LengthOf(PropAll(bufnr), 0)
+            call qfhl#update(win_getid())
+            Assert LengthOf(PropAll(bufnr), 0)
+          End
+        End
+
+        Context when {force} is true
+          It updates highlights
+            Assert LengthOf(PropAll(bufnr), 0)
+            call qfhl#update(win_getid(), v:true)
+            Assert LengthOf(PropAll(bufnr), 2)
+          End
+        End
+      End
+    End
+
+    Context when location list exists
+      Before
+        call setloclist(0, [
+        \   #{bufnr: bufnr, lnum: 1, type: ''},
+        \   #{bufnr: bufnr, lnum: 2, type: ''},
+        \ ])
+      End
+
+      It updates text properties
+        Assert Equals(PropAll(bufnr), [])
+        call qfhl#update(win_getid())
+        Assert Equals(PropAll(bufnr), [
+        \   #{
+        \     type: 'qfhl_loclist_info',
+        \     lnum: 1, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \   #{
+        \     type: 'qfhl_loclist_info',
+        \     lnum: 2, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \ ])
+      End
+
+      Context when already updated
+        Before
+          call qfhl#update(win_getid())
+          " qfhl#update() was applied but text props were removed accidentally
+          call prop_remove(#{
+          \   type: 'qfhl_loclist_info',
+          \   bufnr: bufnr,
+          \   all: v:true,
+          \ })
+        End
+
+        Context when {force} is false
+          It does not update highlights
+            Assert LengthOf(PropAll(bufnr), 0)
+            call qfhl#update(win_getid())
+            Assert LengthOf(PropAll(bufnr), 0)
+          End
+        End
+
+        Context when {force} is true
+          It updates highlights
+            Assert LengthOf(PropAll(bufnr), 0)
+            call qfhl#update(win_getid(), v:true)
+            Assert LengthOf(PropAll(bufnr), 2)
+          End
+        End
+      End
+
+      Context when a buffer is shown at multiple windows
+        Before
+          let win1 = win_getid()
+          call setloclist(win1, [
+          \   #{bufnr: bufnr, lnum: 1, type: ''},
+          \ ])
+          split
+          let win2 = win_getid()
+          call setloclist(win2, [])
+          split
+          let win3 = win_getid()
+          call setloclist(win3, [
+          \   #{bufnr: bufnr, lnum: 2, type: ''},
+          \ ])
+        End
+
+        Context when g:qfhl#multi_loclist is 'keep'
+          It keeps highlights if loclist is empty
+            let g:qfhl#multi_loclist = 'keep'
+
+            Assert Equals(PropAll(bufnr), [])
+            call qfhl#update(win3)
+            Assert Equals(PropAll(bufnr), [
+            \   #{
+            \     type: 'qfhl_loclist_info',
+            \     lnum: 2, col: 1, length: 8,
+            \     start: 1, end: 1,
+            \   },
+            \ ])
+            call qfhl#update(win2)
+            Assert Equals(PropAll(bufnr), [
+            \   #{
+            \     type: 'qfhl_loclist_info',
+            \     lnum: 2, col: 1, length: 8,
+            \     start: 1, end: 1,
+            \   },
+            \ ])
+            call qfhl#update(win1)
+            Assert Equals(PropAll(bufnr), [
+            \   #{
+            \     type: 'qfhl_loclist_info',
+            \     lnum: 1, col: 1, length: 8,
+            \     start: 1, end: 1,
+            \   },
+            \ ])
+          End
+        End
+
+        Context when g:qfhl#multi_loclist is 'merge'
+          It merges all loclists
+            let g:qfhl#multi_loclist = 'merge'
+
+            Assert Equals(PropAll(bufnr), [])
+            call qfhl#update(win3)
+            Assert Equals(PropAll(bufnr), [
+            \   #{
+            \     type: 'qfhl_loclist_info',
+            \     lnum: 1, col: 1, length: 8,
+            \     start: 1, end: 1,
+            \   },
+            \   #{
+            \     type: 'qfhl_loclist_info',
+            \     lnum: 2, col: 1, length: 8,
+            \     start: 1, end: 1,
+            \   },
+            \ ])
+            call qfhl#update(win2)
+            Assert Equals(PropAll(bufnr), [
+            \   #{
+            \     type: 'qfhl_loclist_info',
+            \     lnum: 1, col: 1, length: 8,
+            \     start: 1, end: 1,
+            \   },
+            \   #{
+            \     type: 'qfhl_loclist_info',
+            \     lnum: 2, col: 1, length: 8,
+            \     start: 1, end: 1,
+            \   },
+            \ ])
+            call qfhl#update(win1)
+            Assert Equals(PropAll(bufnr), [
+            \   #{
+            \     type: 'qfhl_loclist_info',
+            \     lnum: 1, col: 1, length: 8,
+            \     start: 1, end: 1,
+            \   },
+            \   #{
+            \     type: 'qfhl_loclist_info',
+            \     lnum: 2, col: 1, length: 8,
+            \     start: 1, end: 1,
+            \   },
+            \ ])
+          End
+        End
+
+        Context when g:qfhl#multi_loclist is 'flush'
+          It flushes highlights every updates
+            let g:qfhl#multi_loclist = 'flush'
+
+            Assert Equals(PropAll(bufnr), [])
+            call qfhl#update(win3)
+            Assert Equals(PropAll(bufnr), [
+            \   #{
+            \     type: 'qfhl_loclist_info',
+            \     lnum: 2, col: 1, length: 8,
+            \     start: 1, end: 1,
+            \   },
+            \ ])
+            call qfhl#update(win2)
+            Assert Equals(PropAll(bufnr), [])
+            call qfhl#update(win1)
+            Assert Equals(PropAll(bufnr), [
+            \   #{
+            \     type: 'qfhl_loclist_info',
+            \     lnum: 1, col: 1, length: 8,
+            \     start: 1, end: 1,
+            \   },
+            \ ])
+          End
+        End
+      End
+    End
+  End
+
+  Describe qfhl#update_all()
+    Before
+      let lines =<< trim BUFFER
+      foofoofoo
+      barbarbar
+      buzbuzbuz
+      BUFFER
+
+      enew
+      call setline(1, lines)
+      let bufnr1 = bufnr('%')
+
+      tabnew
+      call setline(1, lines)
+      let bufnr2 = bufnr('%')
+      let bufnrs = [bufnr1, bufnr2]
+
+      call setqflist([
+      \   #{bufnr: bufnr1, lnum: 1, type: ''},
+      \   #{bufnr: bufnr2, lnum: 2, type: ''},
+      \ ])
+    End
+
+    After
+      bwipeout!
+      bwipeout!
+    End
+
+    Context when {tabnr} is negative value
+      It updates all tabpages
+        Assert Equals(PropAll(bufnrs), [])
+        call qfhl#update_all(-1)
+        Assert Equals(PropAll(bufnrs), [
+        \   #{
+        \     bufnr: bufnr1, type: 'qfhl_quickfix_info',
+        \     lnum: 1, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \   #{
+        \     bufnr: bufnr2, type: 'qfhl_quickfix_info',
+        \     lnum: 2, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \ ])
+      End
+    End
+
+    Context when {tabnr} is 0
+      It updates current tabpage
+        Assert Equals(PropAll(bufnrs), [])
+        call qfhl#update_all(0)
+        Assert Equals(PropAll(bufnrs), [
+        \   #{
+        \     bufnr: bufnr2, type: 'qfhl_quickfix_info',
+        \     lnum: 2, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \ ])
+      End
+    End
+
+    Context when {tabnr} is positive value
+      It updates specified tabpage
+        Assert Equals(PropAll(bufnrs), [])
+        call qfhl#update_all(1)
+        Assert Equals(PropAll(bufnrs), [
+        \   #{
+        \     bufnr: bufnr1, type: 'qfhl_quickfix_info',
+        \     lnum: 1, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \ ])
+      End
+    End
+  End
+
+  Describe qfhl#add_highlights()
+    Before
+      let lines =<< trim BUFFER
+      foofoofoo
+      barbarbar
+      buzbuzbuz
+      BUFFER
+
+      enew
+      call setline(1, lines)
+      let bufnr = bufnr('%')
+    End
+
+    After
+      bwipeout!
+    End
+
+    Context when target buffer is not loaded
+      It ignores them
+        enew!
+        call qfhl#add_highlights([
+        \   #{
+        \     bufnr: bufnr, type: '',
+        \     lnum: 1, col: 5, end_lnum: 3, end_col: 3,
+        \   },
+        \ ], 'quickfix')
+        Assert Equals(PropAll(bufnr), [])
+      End
+    End
+
+    Context when there are invalid entry
+      It ignores them
+        call qfhl#add_highlights([
+        \   #{bufnr: bufnr, lnum: 0, type: ''},
+        \   #{bufnr: bufnr, lnum: 1, type: ''},
+        \   #{bufnr: bufnr, lnum: 2, type: '', valid: 0},
+        \ ], 'quickfix')
+        Assert Equals(PropAll(bufnr), [#{
+        \   type: 'qfhl_quickfix_info',
+        \   lnum: 1, col: 1, length: 8,
+        \   start: 1, end: 1,
+        \ }])
+      End
+    End
+
+    Context when an entry has end_lnum and end_col
+      It affects text properties
+        call qfhl#add_highlights([
+        \   #{
+        \     bufnr: bufnr, type: '', valid: 1,
+        \     lnum: 1, col: 5, end_lnum: 3, end_col: 3,
+        \   },
+        \ ], 'quickfix')
+        Assert Equals(PropAll(bufnr), [
+        \   #{
+        \    type: 'qfhl_quickfix_info',
+        \    lnum: 1, col: 5, length: 6,
+        \    start: 1, end: 0,
+        \   },
+        \   #{
+        \    type: 'qfhl_quickfix_info',
+        \    lnum: 2, col: 1, length: 10,
+        \    start: 0, end: 0,
+        \   },
+        \   #{
+        \    type: 'qfhl_quickfix_info',
+        \    lnum: 3, col: 1, length: 2,
+        \    start: 0, end: 1,
+        \   },
+        \ ])
+      End
+    End
+
+    Context when the entry has type
+      It highlights these with corresponding type
+        call qfhl#add_highlights([
+        \   #{bufnr: bufnr, lnum: 1, type: 'E'},
+        \   #{bufnr: bufnr, lnum: 2, type: 'W'},
+        \   #{bufnr: bufnr, lnum: 3, type: 'I'},
+        \   #{bufnr: bufnr, lnum: 3, type: ''},
+        \   #{bufnr: bufnr, lnum: 3},
+        \ ], 'quickfix')
+        Assert Equals(PropAll(bufnr), [
+        \   #{
+        \     type: 'qfhl_quickfix_error',
+        \     lnum: 1, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \   #{
+        \     type: 'qfhl_quickfix_warning',
+        \     lnum: 2, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \   #{
+        \     type: 'qfhl_quickfix_info',
+        \     lnum: 3, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \   #{
+        \     type: 'qfhl_quickfix_info',
+        \     lnum: 3, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \   #{
+        \     type: 'qfhl_quickfix_info',
+        \     lnum: 3, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \ ])
+      End
+    End
+  End
+
+  Describe qfhl#clear()
+    Before
+      let lines =<< trim BUFFER
+      foofoofoo
+      barbarbar
+      buzbuzbuz
+      BUFFER
+
+      enew
+      call setline(1, lines)
+      let bufnr = bufnr('%')
+
+      call setqflist([
+      \   #{bufnr: bufnr, lnum: 1, type: ''},
+      \ ])
+      call setloclist(0, [
+      \   #{bufnr: bufnr, lnum: 2, type: ''},
+      \ ])
+      call qfhl#update(win_getid())
+    End
+
+    After
+      bwipeout!
+    End
+
+    Context when {keep} is FALSE
+      It clears all highlight groups and flags
+        Assert LengthOf(PropAll(bufnr), 2)
+        call qfhl#clear(bufnr, v:false)
+        Assert Equals(PropAll(bufnr), [])
+        call qfhl#update(win_getid())
+        Assert LengthOf(PropAll(bufnr), 2)
+      End
+    End
+
+    Context when {keep} is TRUE
+      It clears all highlight groups but doesn't clear flags
+        Assert LengthOf(PropAll(bufnr), 2)
+        call qfhl#clear(bufnr, v:true)
+        Assert Equals(PropAll(bufnr), [])
+        call qfhl#update(win_getid())
+        Assert Equals(PropAll(bufnr), [])
+      End
+    End
+
+    Context when {hl_groups} is not specified
+      It clears all highlight groups in the buffer
+        Assert LengthOf(PropAll(bufnr), 2)
+        call qfhl#clear(bufnr, v:false)
+        Assert Equals(PropAll(bufnr), [])
+      End
+    End
+
+    Context when {hl_groups} is specified
+      It clears only the specified highlight groups in the buffer
+        Assert LengthOf(PropAll(bufnr), 2)
+        call qfhl#clear(bufnr, v:false, ['quickfix'])
+        Assert Equals(PropAll(bufnr), [
+        \   #{
+        \     type: 'qfhl_loclist_info',
+        \     lnum: 2, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \ ])
+      End
+    End
+  End
+
+  Describe qfhl#clear_all()
+    Before
+      let lines =<< trim BUFFER
+      foofoofoo
+      barbarbar
+      buzbuzbuz
+      BUFFER
+
+      enew
+      call setline(1, lines)
+      let bufnr1 = bufnr('%')
+      call qfhl#add_highlights([#{bufnr: bufnr1, lnum: 1}], 'quickfix')
+      call qfhl#add_highlights([#{bufnr: bufnr1, lnum: 2}], 'loclist')
+
+      new
+      call setline(1, lines)
+      let bufnr2 = bufnr('%')
+      call qfhl#add_highlights([#{bufnr: bufnr2, lnum: 2}], 'quickfix')
+      call qfhl#add_highlights([#{bufnr: bufnr2, lnum: 3}], 'loclist')
+    End
+
+    After
+      windo bwipeout!
+    End
+
+    Context when {hl_groups} is not specified
+      It clears all highlight groups of all buffers
+        Assert LengthOf(PropAll([bufnr1, bufnr2]), 4)
+        call qfhl#clear_all(v:false)
+        Assert Equals(PropAll([bufnr1, bufnr2]), [])
+      End
+    End
+
+    Context when {hl_groups} is specified
+      It clears only the specified highlight groups of all buffers
+        Assert LengthOf(PropAll([bufnr1, bufnr2]), 4)
+        call qfhl#clear_all(v:false, ['loclist'])
+        Assert Equals(PropAll([bufnr1, bufnr2]), [
+        \   #{
+        \     bufnr: bufnr1, type: 'qfhl_quickfix_info',
+        \     lnum: 1, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \   #{
+        \     bufnr: bufnr2, type: 'qfhl_quickfix_info',
+        \     lnum: 2, col: 1, length: 8,
+        \     start: 1, end: 1,
+        \   },
+        \ ])
+      End
+    End
+  End
+End
