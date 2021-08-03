@@ -243,7 +243,7 @@ QfhlLoclistInfo					*hl-QfhlLoclistInfo*
 ==============================================================================
 CHANGELOG					*qfhl-changelog*
 
-Unreleased
+1.0.1	2021-08-04
 	- Fix for invalid lnum or col.
 	- Fix the last character of line is not highlighted.
 
