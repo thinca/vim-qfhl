@@ -400,6 +400,23 @@ Describe functions
       End
     End
 
+    Context when a entry has invalid lnum or col
+      It ignores them
+        call qfhl#add_highlights([
+        \   #{bufnr: bufnr, lnum: 4},
+        \   #{bufnr: bufnr, lnum: 1, col: 12},
+        \   #{bufnr: bufnr, lnum: 2, end_lnum: 4},
+        \   #{bufnr: bufnr, lnum: 2, col: 1, end_col: 12},
+        \   #{bufnr: bufnr, lnum: 3, col: 11},
+        \ ], 'quickfix')
+        Assert Equals(PropAll(bufnr), [#{
+        \   type: 'qfhl_quickfix_info',
+        \   lnum: 3, col: 11, length: 0,
+        \   start: 1, end: 1,
+        \ }])
+      End
+    End
+
     Context when an entry has end_lnum and end_col
       It affects text properties
         call qfhl#add_highlights([

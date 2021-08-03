@@ -243,6 +243,9 @@ QfhlLoclistInfo					*hl-QfhlLoclistInfo*
 ==============================================================================
 CHANGELOG					*qfhl-changelog*
 
+Unreleased
+	- Fix for invalid lnum or col.
+
 1.0.0	2021-07-31
 	- Initial version.
 

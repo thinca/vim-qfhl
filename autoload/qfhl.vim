@@ -95,18 +95,36 @@ function qfhl#add_highlights(locations, hl_group) abort
     if !get(loc, 'valid', 1) || lnum <= 0 || !bufloaded(bufnr)
       continue
     endif
+
+    let col = get(loc, 'col') ?? 1
+    let end_lnum = get(loc, 'end_lnum') ?? lnum
+
+    let line = getbufline(bufnr, lnum)
+    let end_line = lnum == end_lnum ? line : getbufline(bufnr, end_lnum)
+    if empty(line) || empty(end_line) || len(line[0]) + 2 < col
+      continue
+    endif
+
+    let end_col = get(loc, 'end_col')
+    if end_col
+      if len(end_line[0]) + 2 < end_col
+        continue
+      endif
+    else
+      let end_col = len(end_line[0])
+    endif
+
     let type = get(loc, 'type')
     let hl_type =
     \   type is# 'E' ? 'error' :
     \   type is# 'W' ? 'warning' :
     \   'info'
     let prop_type = printf('qfhl_%s_%s', a:hl_group, hl_type)
-    let col = get(loc, 'col') ?? 1
     let props = #{
     \   bufnr: bufnr,
     \   type: prop_type,
-    \   end_lnum: get(loc, 'end_lnum') ?? lnum,
-    \   end_col: get(loc, 'end_col') ?? s:get_line_len(bufnr, lnum),
+    \   end_lnum: end_lnum,
+    \   end_col: end_col,
     \ }
     call prop_add(lnum, col, props)
   endfor
@@ -174,10 +192,6 @@ endfunction
 
 function s:filter_locations_by_bufnr(locations, bufnr) abort
   return filter(a:locations, { _, loc -> loc.bufnr == a:bufnr })
-endfunction
-
-function s:get_line_len(bufnr, lnum) abort
-  return len(getbufline(a:bufnr, a:lnum)[0])
 endfunction
 
 
