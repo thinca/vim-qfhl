@@ -42,12 +42,12 @@ Describe auto
         Assert Equals(PropAll(bufnrs), [
         \   #{
         \     bufnr: bufnr1, type: 'qfhl_quickfix_info',
-        \     lnum: 1, col: 1, length: 8,
+        \     lnum: 1, col: 1, length: 9,
         \     start: 1, end: 1,
         \   },
         \   #{
         \     bufnr: bufnr2, type: 'qfhl_quickfix_info',
-        \     lnum: 2, col: 1, length: 8,
+        \     lnum: 2, col: 1, length: 9,
         \     start: 1, end: 1,
         \   },
         \ ])
@@ -61,7 +61,7 @@ Describe auto
         Assert Equals(PropAll(bufnrs), [
         \   #{
         \     bufnr: bufnr2, type: 'qfhl_quickfix_info',
-        \     lnum: 2, col: 1, length: 8,
+        \     lnum: 2, col: 1, length: 9,
         \     start: 1, end: 1,
         \   },
         \ ])

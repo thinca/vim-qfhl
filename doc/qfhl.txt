@@ -245,6 +245,7 @@ CHANGELOG					*qfhl-changelog*
 
 Unreleased
 	- Fix for invalid lnum or col.
+	- Fix the last character of line is not highlighted.
 
 1.0.0	2021-07-31
 	- Initial version.

@@ -111,7 +111,7 @@ function qfhl#add_highlights(locations, hl_group) abort
         continue
       endif
     else
-      let end_col = len(end_line[0])
+      let end_col = len(end_line[0]) + 1
     endif
 
     let type = get(loc, 'type')
